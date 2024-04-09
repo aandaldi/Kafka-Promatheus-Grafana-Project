@@ -1,0 +1,105 @@
+version: '2'
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 22181:2181
+
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8080:8080
+    depends_on:
+      - broker-1
+      - broker-2
+      - broker-3
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker-1:29091,broker-2:29092,broker-3:29093
+
+  
+  broker-1:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - 9091:9091
+      - 29091:29091
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-1:29091,PLAINTEX_HOST://localhost:9091
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEX_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_JMX_PORT: 19101
+      EXTRA_ARGS: -javaagent:/packages/jmx_exporter/jmx_prometheus_javaagent-0.20.0.jar=29101:/usr/share/jmx_exporter/kafka-broker-1.yml
+    volumes:      
+      - ./mount/jmx-exporter:/usr/share/jmx_exporter/      
+      - ./mount/kafka-jmx-volume:/jmx-exporter/
+      - ./mount/packages:/packages/jmx_exporter/
+
+  broker-2:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - 9092:9092
+      - 29092:29092
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-2:29092,PLAINTEX_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEX_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_JMX_PORT: 19101
+      EXTRA_ARGS: -javaagent:/packages/jmx_exporter/jmx_prometheus_javaagent-0.20.0.jar=29102:/usr/share/jmx_exporter/kafka-broker-2.yml
+    volumes:      
+      - ./mount/jmx-exporter:/usr/share/jmx_exporter/      
+      - ./mount/kafka-jmx-volume:/jmx-exporter/
+      - ./mount/packages:/packages/jmx_exporter/
+
+  broker-3:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - 9093:9093
+      - 29093:29093
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-3:29093,PLAINTEX_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEX_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      # KAFKA_LISTENERS: 'PLAINTEXT://kafka4:29094,PLAINTEXT_HOST://0.0.0.0:9094'
+      KAFKA_JMX_PORT: 19101
+      EXTRA_ARGS: -javaagent:/packages/jmx_exporter/jmx_prometheus_javaagent-0.20.0.jar=29103:/usr/share/jmx_exporter/kafka-broker-3.yml
+      # KAFKA_JMX_HOSTNAME: localhost
+    volumes:      
+      - ./mount/jmx-exporter:/usr/share/jmx_exporter/      
+      - ./mount/kafka-jmx-volume:/jmx-exporter/
+      - ./mount/packages:/packages/jmx_exporter/
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - 9090:9090/tcp
+    volumes:
+      - ./mount/prometheus:/etc/prometheus
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./mount/grafana-data:/var/lib/grafana
+      - ./mount/grafana/provisioning:/etc/grafana/provisioning
